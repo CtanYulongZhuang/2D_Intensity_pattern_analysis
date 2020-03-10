@@ -50,49 +50,71 @@ def cross_correlation(signal1, signal2):
     return CC_results
 
 
-def RotCC_2_images(intens1, intens2, n_angbin):
-    size_1D = intens1.shape[0]
 
-    #centre_p = (0 + size_1D - 1)/2.
+
+def RotCC_2_images(intens1, intens2, n_angbin):
+
+    #@jit
+    def CTY(z_matrix1, z_matrix2):
+        n_angbin = z_matrix1.shape[0] 
+        CC_value = np.empty((n_angbin, n_angbin)) # <--- np.zeros() is rewritten as np.empty() 
+        CC_value[:] = 0
+        STD_value = np.empty((n_angbin, n_angbin)) # <--- np.zeros() is rewritten as np.empty() 
+        STD_value[:] = 0
+        logCC_value = np.empty((n_angbin, n_angbin)) # <--- np.zeros() is rewritten as np.empty() 
+        logCC_value[:] = 0
+        
+        for i in range(n_angbin): 
+            line_1_z0 = z_matrix1[i]
+            line_1_z = line_1_z0/np.sum(line_1_z0) 
+            for j in range(n_angbin): 
+                line_2_z0 = z_matrix2[j]
+                line_2_z = line_2_z0/np.sum(line_2_z0) 
+                
+                CC_value[i,j] = np.sum(line_1_z*line_2_z)/(np.sum(line_1_z**2)*np.sum(line_2_z**2))**0.5
+                STD_value[i,j] = np.sum((line_1_z - line_2_z)**2)
+                log_line_1 = np.log10(line_1_z0+0.001)
+                log_line_2 = np.log10(line_2_z0+0.001)
+                npos = np.where((log_line_1 > 0) & (log_line_2 > 0))
+                logCC_value[i,j] = np.sum(log_line_1[npos] * log_line_2[npos])
+
+        return  CC_value, logCC_value, STD_value
+    
+    size_1D = intens1.shape[0]
+    centre_p = (0 + size_1D - 1)/2.
+
     #coordinate = np.array([(x,y) for x in range(size_1D) for y in range(size_1D)])
     #x = coordinate[:,0] - centre_p
     #y = coordinate[:,1] - centre_p
     r = np.arange(size_1D) - (size_1D-1)/2
+    x_matrix = np.zeros([n_angbin, size_1D])
+
+    
     x0 = np.arange(size_1D) - (size_1D-1)/2
     y0 = np.arange(size_1D) - (size_1D-1)/2
 
-    #n_angbin = 20
     angbin = 3.1416/(n_angbin)
 
-    CC_value = np.zeros([n_angbin,n_angbin])
-    STD_value = np.zeros([n_angbin,n_angbin])
-    logCC_value = np.zeros([n_angbin,n_angbin])
-    fp1 = interpolate.interp2d(x0, y0, intens1, kind='cubic')
-    fp2 = interpolate.interp2d(x0, y0, intens2, kind='cubic')
-    #f = interpolate.interp2d(x0, y0, z0, kind='cubic')
-    for i in range(n_angbin):
-        thita_1 = i*angbin
-        line_1_x = r * np.cos(thita_1)
-        line_1_y = r * np.sin(thita_1)
-        line_1_z0 = np.array([fp1(line_1_x[k],line_1_y[k])[0] for k in range(size_1D)])
-        line_1_z = line_1_z0/np.sum(line_1_z0)
+    x_matrix = np.array([r * np.cos(i*angbin) for i in range(n_angbin)])
+    y_matrix = np.array([r * np.sin(i*angbin) for i in range(n_angbin)])
+    
+    
+    
+    z1 = intens1
+    z2 = intens2
+    fp1 = interpolate.interp2d(x0, y0, z1, kind='cubic')
+    fp2 = interpolate.interp2d(x0, y0, z2, kind='cubic')
 
-        for j in range(n_angbin):
-            thita_2 = j*angbin
-            line_2_x = r * np.cos(thita_2)
-            line_2_y = r * np.sin(thita_2)
-            line_2_z0 = np.array([fp2(line_2_x[k],line_2_y[k])[0] for k in range(size_1D)])
-            line_2_z = line_2_z0/np.sum(line_2_z0)
+    z_matrix1 = np.array([fp1(x_matrix[i,j],y_matrix[i,j])[0] for i in range(n_angbin) for j in range(size_1D)])
+    z_matrix1 = z_matrix1.reshape(n_angbin, size_1D)
+    z_matrix2 = np.array([fp2(x_matrix[i,j],y_matrix[i,j])[0] for i in range(n_angbin) for j in range(size_1D)])
+    z_matrix2 = z_matrix2.reshape(n_angbin, size_1D)
 
-            CC_value[i,j] = np.sum(line_1_z*line_2_z)/(np.sum(line_1_z**2)*np.sum(line_2_z**2))**0.5
-            STD_value[i,j] = np.sum((line_1_z - line_2_z)**2)
-            log_line_1 = np.log10(line_1_z0+0.001)
-            log_line_2 = np.log10(line_2_z0+0.001)
-            npos = np.where((log_line_1 > 0) & (log_line_2 > 0))
-            logCC_value[i,j] = np.sum(log_line_1[npos] * log_line_2[npos])
+    #CC_value, logCC_value, STD_value = CTY(z_matrix1, z_matrix2)
 
-    return  CC_value, logCC_value, STD_value
+    return  CTY(z_matrix1, z_matrix2)
 
+    
 # compute using the R language
 #norm_corr_ab = sum(a*b) / sqrt(sum(a^2)*sum(b^2)) #equal 0.947
 #norm_corr_ac = sum(a*c) / sqrt(sum(a^2)*sum(c^2))
