@@ -1,3 +1,5 @@
+import multiprocessing as mp
+import ctypes
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
@@ -126,7 +128,7 @@ foldername = '/gpfs/exfel/exp/SPB/201802/p002160/scratch/ayyerkar/'+rec_name+'/d
 filename = foldername + 'output_044.h5'
 h5 = h5py.File(filename,'r')
 #h5.keys() #<KeysViewHDF5 ['intens', 'inter_weight', 'likelihood', 'mutual_info', 'occupancies', 'orientations', 'scale']>
-intens2 = np.array(h5['intens'])
+intens = np.array(h5['intens'])
 orientations2 = np.array(h5['orientations'])
 h5.close()
 
@@ -134,118 +136,41 @@ h5.close()
 
 
 n_models = intens.shape[0]
-CC_models = np.zeros([n_models,n_models])+1.0
-STD_models = np.zeros([n_models,n_models])
-logCC_models = np.zeros([n_models,n_models])
+CC_models = mp.Array(ctypes.c_double, n_models**2)
+logCC_models = mp.Array(ctypes.c_double, n_models**2)
+STD_models = mp.Array(ctypes.c_double, n_models**2)
 
+def mp_worker(rank, indices, CC_models, logCC_models, STD_models):
+    irange = indices[rank::nproc, 0]
+    jrange = indices[rank::nproc, 1]
+
+    for i, j in zip(irange, jrange):
+        CC_value, logCC_value, STD_value = RotCC_2_images(intens[i], intens[j], 20)
+
+        CC_models[i*n_models + j] = max(CC_value.ravel())
+        logCC_models[i*n_models + j] = max(logCC_value.ravel())
+        CC_models[j*n_models + i] = max(CC_value.ravel())
+        logCC_models[j*n_models + i] = max(logCC_value.ravel())
+        STD_models[i*n_models + j] = min(STD_value.ravel())
+        STD_models[j*n_models + i] = min(STD_value.ravel())
+
+        if rank == 0:
+            print("CC (%d, %d):"%(i,j), max(CC_value.ravel()), max(logCC_value.ravel()), min(STD_value.ravel()))
+
+nproc = 16
+ind = []
+# Get pairs to be processed
 for i in range(n_models):
-    z1 = intens[i]
-    print("main image = ", i)
-
     for j in range(i+1, n_models):
-        z2 = intens[j]
+        ind.append([i,j])
+ind = np.array(ind)
+jobs = [mp.Process(target=mp_worker, args=(rank, ind, CC_models, logCC_models, STD_models)) for rank in range(nproc)]
+[j.start() for j in jobs]
+[j.join() for j in jobs]
 
-        CC_value, logCC_value, STD_value = RotCC_2_images(z1, z2, 20)
-        CC_models[i,j] = max(CC_value.ravel())
-        logCC_models[i,j] = max(logCC_value.ravel())
-        CC_models[j,i] = max(CC_value.ravel())
-        logCC_models[j,i] = max(logCC_value.ravel())
-        STD_models[i,j] = min(STD_value.ravel())
-        STD_models[j,i] = min(STD_value.ravel())
-        print("CC image = ", j, ':', max(CC_value.ravel()), max(logCC_value.ravel()), min(STD_value.ravel()))
+CC_models = np.frombuffer(CC_models.get_obj()).reshape(n_models, n_models)
+logCC_models = np.frombuffer(logCC_models.get_obj()).reshape(n_models, n_models)
+STD_models = np.frombuffer(STD_models.get_obj()).reshape(n_models, n_models)
 
 savfilename = rec_name+"_CC_analysis.npz"
 np.savez(savfilename, CC_models=CC_models,logCC_models=logCC_models, STD_models=STD_models)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
