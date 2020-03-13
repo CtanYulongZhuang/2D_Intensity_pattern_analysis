@@ -13,11 +13,12 @@ from matplotlib import cm
 
 
 
+
 def spatial_contrast(intens, region):
 
     def CST_i(intens_i, filter):
         size_1D = intens_i.shape[0]
-        z_c = intens[i].ravel()/(np.sum(intens[i].ravel())/(size_1D**2))
+        z_c = intens_i.ravel()/(np.sum(intens_i.ravel())/(size_1D**2))
         #plt.scatter(x_c[nHQ], y_c[nHQ], c=np.log10(z_c[nHQ]), s=1)
         i_map = z_c[filter]
         i_map = i_map/np.sum(i_map)*len(i_map)
@@ -55,6 +56,7 @@ def spatial_contrast(intens, region):
     Contrast_models = np.frombuffer(Contrast_models.get_obj())
 
     return Contrast_models, filter
+
 
 
 
