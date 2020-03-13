@@ -40,21 +40,21 @@ def spatial_contrast(intens, region):
 
 
 def radial_azimuthal_variation(intens, n_angbin, rbin, mask, binsize):
-    #rbins= np.arange(65)*2+60
-    #n_angbin=60
 
-    def binned_sted( xx,yy,bins,binsize ):
-        nb=len(bins)
-        yy_mean=bins*0.0
-        yy_std=bins*0.0
-        for i in range(0,nb):
-            n_in_bin=np.where((xx< bins[i]+binsize/2) & (xx> bins[i]-binsize/2))
-            #print(bins[i]-binsize/2,bins[i]+binsize/2)
-            yy_mean[i]=np.mean(yy[n_in_bin])
-            yy_std[i]=np.std(yy[n_in_bin])
-        return bins,yy_mean,yy_std
 
     def HQ_std_RA(x0, y0, intens_i, n_angbin, r, bins, binsize):
+
+        def binned_sted(xx,yy,bins,binsize):
+            nb=len(bins)
+            yy_mean=bins*0.0
+            yy_std=bins*0.0
+            for i in range(0,nb):
+                n_in_bin=np.where((xx< bins[i]+binsize/2) & (xx> bins[i]-binsize/2))
+                #print(bins[i]-binsize/2,bins[i]+binsize/2)
+                yy_mean[i]=np.mean(yy[n_in_bin])
+                yy_std[i]=np.std(yy[n_in_bin])
+            return bins,yy_mean,yy_std
+
         angbin = 3.1416/(n_angbin)
         z0 = intens_i/(np.sum(intens_i.ravel())/(size_1D**2))
         fp0 = interpolate.interp2d(x0, y0, z0, kind='cubic')
@@ -69,16 +69,17 @@ def radial_azimuthal_variation(intens, n_angbin, rbin, mask, binsize):
         radii_vri = radii_vri[::-1]
 
         BB=binned_sted(np.arange(220),np.log10(radii_vri),rbins,binsize)
-        HQ_std_RA = np.sum(BB[2])/n_bins
+        HQ_std_RA = np.sum(BB[2])/len(BB[2])
 
         return HQ_std_RA
-
-
 
     n_models = intens.shape[0]
     size_1D = intens.shape[1]
     centre_p = (0 + size_1D - 1)/2.
     radil_size = int(centre_p)
+
+    binsize = 20
+    angbin = 3.1416/(n_angbin)
 
     r = np.arange(size_1D) - (size_1D-1)/2
     x_matrix = np.zeros([n_angbin, size_1D])
@@ -86,31 +87,30 @@ def radial_azimuthal_variation(intens, n_angbin, rbin, mask, binsize):
     x0 = np.arange(size_1D) - (size_1D-1)/2
     y0 = np.arange(size_1D) - (size_1D-1)/2
 
-    angbin = 3.1416/(n_angbin)
     radii_vri = np.zeros([n_models, radil_size])
     radii_vri_fft = np.zeros([n_models, radil_size - mask])
 
     nproc = 4
-    HQ_std_RA = mp.Array(ctypes.c_double, n_models)
     HQ_std_models = mp.Array(ctypes.c_double, n_models)
 
-    def mp_worker(rank, models, HQ_std_models): #models = np.range(n_models)
-        irange = models[rank::nproc]
+    def mp_worker(rank, indices, HQ_std_models):
+        irange = indices[rank::nproc]
+
         for i in irange:
-            HQ_std_models[i] = HQ_std_RA(x0, y0, intens[i], n_angbin, r, rbins, binsize)
+            HQ_std_RA_i = HQ_std_RA(x0, y0, intens[i], n_angbin, r, rbins, binsize)
+            HQ_std_models[i] = HQ_std_RA_i
             if rank == 0:
                 print("PP (%d):"%i, HQ_std_models[i])
 
-    # Get pairs to be processed
+    nproc = 16
     ind = np.arange(n_models)
-    jobs = [mp.Process(target=mp_worker, args=(rank, ind, HQ_std_RA)) for rank in range(nproc)]
+    jobs = [mp.Process(target=mp_worker, args=(rank, ind, HQ_std_models)) for rank in range(nproc)]
     [j.start() for j in jobs]
     [j.join() for j in jobs]
 
     HQ_std_models = np.frombuffer(HQ_std_models.get_obj())
 
     return HQ_std_models
-
 
 
 
