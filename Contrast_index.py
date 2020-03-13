@@ -158,3 +158,28 @@ nHQ = filter
 
 cmpmst = (contrast_models-min(contrast_models))/(max(contrast_models)-min(contrast_models))
 colormp = cm.viridis(cmpmst)
+
+
+cons = HQ_std_models * contrast_models
+bp = np.where(cons < 0.35)
+for i in range(n_models):
+    plt.subplot(5, 10, i+1)
+    intens_m = intens[i].ravel()*0+0.00001
+    intens_m[nHQ] = intens[i].ravel()[nHQ]
+    intens_m = intens_m.reshape(size_1D, size_1D)
+    plt.imshow(np.log10(intens_m), vmin=-6)
+    plt.text(0, 50, '  SC= '+str(round(contrast_models[i], 3)), fontsize=12)
+    plt.text(0, 100, '  AV= '+str(round(HQ_std_models[i], 3)), fontsize=12)
+    plt.text(0, 150, '  ALL= '+str(round(cons[i], 3)), fontsize=12)
+    plt.text(50, 6, 'No.:'+str( i), fontsize=12)
+    if (cons[i] < 0.3):
+        plt.text(0, 50, '  SC= '+str(round(contrast_models[i], 3)), fontsize=12, color ='Red')
+        plt.text(0, 100, '  AV= '+str(round(HQ_std_models[i], 3)), fontsize=12, color ='Red')
+        plt.text(0, 150, '  ALL= '+str(round(cons[i], 3)), fontsize=12, color ='Red')
+        plt.text(50, 6, 'No.:'+str( i), fontsize=12, color ='Red')
+
+plt.scatter(contrast_models,HQ_std_models,c=cons,s=25)
+plt.xlabel("Spatial_contrast", fontsize=12)
+plt.ylabel("HQ_std(Azimuthal_variation)", fontsize=12)
+plt.colorbar(label='Spatial_contrast * HQ_std(Azimuthal_variation)' )
+
