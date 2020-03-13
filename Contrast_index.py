@@ -12,7 +12,19 @@ import ctypes
 from matplotlib import cm
 
 
+
 def spatial_contrast(intens, region):
+
+    def CST_i(intens_i, filter):
+        size_1D = intens_i.shape[0]
+        z_c = intens[i].ravel()/(np.sum(intens[i].ravel())/(size_1D**2))
+        #plt.scatter(x_c[nHQ], y_c[nHQ], c=np.log10(z_c[nHQ]), s=1)
+        i_map = z_c[filter]
+        i_map = i_map/np.sum(i_map)*len(i_map)
+        ave_map = np.sum(i_map)/len(i_map)
+        contrast_i = (np.sum([(i_map[k] - ave_map)**2 for k in range(len(i_map))])/len(i_map))**(0.5)
+        return contrast_i
+
     #region = [50, 100]
     n_models = intens.shape[0]
     size_1D = intens.shape[1]
@@ -22,21 +34,28 @@ def spatial_contrast(intens, region):
     y_c = coordinate[:,1] - centre_p
     filter = np.where(((x_c**2 + y_c**2)**(0.5) > region[0]) & ((x_c**2 + y_c**2)**(0.5) < region[1]))
 
+    nproc = 4
+    Contrast_models = mp.Array(ctypes.c_double, n_models)
 
+    def mp_worker(rank, indices, Contrast_models):
+        irange = indices[rank::nproc]
 
-    contrast_models = np.zeros(intens.shape[0])
-    for i in range(n_models):
+        for i in irange:
+            contrast_i = CST_i( intens[i],  filter)
+            Contrast_models[i] = contrast_i
+            if rank == 0:
+                print("PP (%d):"%i, Contrast_models[i])
 
-        z_c = intens[i].ravel()/(np.sum(intens[i].ravel())/(size_1D**2))
-        #plt.scatter(x_c[nHQ], y_c[nHQ], c=np.log10(z_c[nHQ]), s=1)
-        i_map = z_c[filter]
-        i_map = i_map/np.sum(i_map)*len(i_map)
-        ave_map = np.sum(i_map)/len(i_map)
-        contrast = (np.sum([(i_map[k] - ave_map)**2 for k in range(len(i_map))])/len(i_map))**(0.5)
-        contrast_models[i] = contrast
-        print("model:", i, "contrast = ", contrast)
+    nproc = 16
+    ind = np.arange(n_models)
+    jobs = [mp.Process(target=mp_worker, args=(rank, ind, Contrast_models)) for rank in range(nproc)]
+    [j.start() for j in jobs]
+    [j.join() for j in jobs]
 
-    return contrast_models, filter
+    Contrast_models = np.frombuffer(Contrast_models.get_obj())
+
+    return Contrast_models, filter
+
 
 
 def radial_azimuthal_variation(intens, n_angbin, rbin, mask, binsize):
