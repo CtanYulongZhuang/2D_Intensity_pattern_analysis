@@ -172,5 +172,8 @@ CC_models = np.frombuffer(CC_models.get_obj()).reshape(n_models, n_models)
 logCC_models = np.frombuffer(logCC_models.get_obj()).reshape(n_models, n_models)
 STD_models = np.frombuffer(STD_models.get_obj()).reshape(n_models, n_models)
 
+CC_models[np.where(CC_models == 0)] = 1
+logCC_models[np.where(logCC_models == 0)] = 1
+
 savfilename = rec_name+"_CC_analysis.npz"
 np.savez(savfilename, CC_models=CC_models,logCC_models=logCC_models, STD_models=STD_models)
