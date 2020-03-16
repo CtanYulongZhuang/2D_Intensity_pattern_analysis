@@ -155,6 +155,8 @@ contrast_models, filter = spatial_contrast(intens, region)
 
 
 nHQ = filter
+n_model = intens.shape[0]
+size_1D = intense.shape[1]
 
 cmpmst = (contrast_models-min(contrast_models))/(max(contrast_models)-min(contrast_models))
 colormp = cm.viridis(cmpmst)
