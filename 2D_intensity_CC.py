@@ -138,9 +138,10 @@ h5.close()
 n_models = intens.shape[0]
 CC_models = mp.Array(ctypes.c_double, n_models**2)
 logCC_models = mp.Array(ctypes.c_double, n_models**2)
+aveCC_models = mp.Array(ctypes.c_double, n_models**2)
 STD_models = mp.Array(ctypes.c_double, n_models**2)
 
-def mp_worker(rank, indices, CC_models, logCC_models, STD_models):
+def mp_worker(rank, indices, CC_models, logCC_models, STD_models, aveCC_models):
     irange = indices[rank::nproc, 0]
     jrange = indices[rank::nproc, 1]
 
@@ -153,6 +154,8 @@ def mp_worker(rank, indices, CC_models, logCC_models, STD_models):
         logCC_models[j*n_models + i] = max(logCC_value.ravel())
         STD_models[i*n_models + j] = min(STD_value.ravel())
         STD_models[j*n_models + i] = min(STD_value.ravel())
+        aveCC_models[i*n_models + j] = np.mean(CC_value.ravel())
+        aveCC_models[j*n_models + i] = np.mean(CC_value.ravel())
 
         if rank == 0:
             print("CC (%d, %d):"%(i,j), max(CC_value.ravel()), max(logCC_value.ravel()), min(STD_value.ravel()))
@@ -164,16 +167,18 @@ for i in range(n_models):
     for j in range(i+1, n_models):
         ind.append([i,j])
 ind = np.array(ind)
-jobs = [mp.Process(target=mp_worker, args=(rank, ind, CC_models, logCC_models, STD_models)) for rank in range(nproc)]
+jobs = [mp.Process(target=mp_worker, args=(rank, ind, CC_models, logCC_models, STD_models, aveCC_models)) for rank in range(nproc)]
 [j.start() for j in jobs]
 [j.join() for j in jobs]
 
 CC_models = np.frombuffer(CC_models.get_obj()).reshape(n_models, n_models)
 logCC_models = np.frombuffer(logCC_models.get_obj()).reshape(n_models, n_models)
+aveCC_models = np.frombuffer(aveCC_models.get_obj()).reshape(n_models, n_models)
 STD_models = np.frombuffer(STD_models.get_obj()).reshape(n_models, n_models)
 
 CC_models[np.where(CC_models == 0)] = 1
 logCC_models[np.where(logCC_models == 0)] = 1
+aveCC_models[np.where(aveCC_models == 0)] = 1
 
 savfilename = rec_name+"_CC_analysis.npz"
-np.savez(savfilename, CC_models=CC_models,logCC_models=logCC_models, STD_models=STD_models)
+np.savez(savfilename, CC_models=CC_models,logCC_models=logCC_models, STD_models=STD_models, aveCC_models=aveCC_models)
