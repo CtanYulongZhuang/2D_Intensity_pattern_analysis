@@ -154,8 +154,9 @@ def mp_worker(rank, indices, CC_models, logCC_models, STD_models, aveCC_models):
         logCC_models[j*n_models + i] = max(logCC_value.ravel())
         STD_models[i*n_models + j] = min(STD_value.ravel())
         STD_models[j*n_models + i] = min(STD_value.ravel())
-        aveCC_models[i*n_models + j] = np.mean(CC_value.ravel())
-        aveCC_models[j*n_models + i] = np.mean(CC_value.ravel())
+        aveCC_models[i*n_models + j] = np.mean([max(CC_models[l]) for l in range(CC_models.shape[0])])
+        aveCC_models[j*n_models + i] = np.mean([max(CC_models[l]) for l in range(CC_models.shape[0])])
+        #Average the maximum value of each columns of CC_values: the mean CC per the max CC of each lines.
 
         if rank == 0:
             print("CC (%d, %d):"%(i,j), max(CC_value.ravel()), max(logCC_value.ravel()), min(STD_value.ravel()))
