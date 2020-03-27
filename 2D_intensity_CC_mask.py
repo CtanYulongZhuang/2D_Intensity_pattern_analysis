@@ -70,16 +70,11 @@ def RotCC_2_images(intens1, intens2, n_angbin, mask_radius):
         for i in range(n_angbin):
             line_1_z0 = z_matrix1[i]
             line_1_z0[np.where(line_1_z0 < 0.000001)] = 0.000001
-            line_1_z1 = line_1_z0/np.sum(line_1_z0)*len(line_1_z0)
+            line_1_z = line_1_z0/np.sum(line_1_z0)*len(line_1_z0)
             for j in range(n_angbin):
                 line_2_z0 = z_matrix2[j]
                 line_2_z0[np.where(line_2_z0 < 0.000001)] = 0.000001
-                line_2_z1 = line_2_z0/np.sum(line_2_z0)*len(line_2_z0)
-
-                line_ave = (line_1_z1 + line_2_z1)/2.
-                line_1_z = line_1_z1/line_ave
-                line_2_z = line_2_z1/line_ave
-
+                line_2_z = line_2_z0/np.sum(line_2_z0)*len(line_2_z0)
 
                 CC_value[i,j] = np.sum(line_1_z*line_2_z)/(np.sum(line_1_z**2)*np.sum(line_2_z**2))**0.5
                 STD_value[i,j] = np.sum((line_1_z - line_2_z)**2)
@@ -192,5 +187,5 @@ CC_models[np.where(CC_models == 0)] = 1
 logCC_models[np.where(logCC_models == 0)] = 1
 aveCC_models[np.where(aveCC_models == 0)] = 1
 
-savfilename = "Gold_Oct40_Cub42_45_CC_mask20_reg.npz"
+savfilename = "Gold_Oct40_Cub42_45_CC_mask20.npz"
 np.savez(savfilename, CC_models=CC_models,logCC_models=logCC_models, STD_models=STD_models, aveCC_models=aveCC_models)
