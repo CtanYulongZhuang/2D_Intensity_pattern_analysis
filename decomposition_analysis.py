@@ -39,9 +39,20 @@ class decomposition_analysis:
 
         X_t = embedding.fit_transform(self.input_CC_matrix)
         kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(X_t)
-        group_ind = kmeans.labels_
-        group_ind = max(group_ind)-group_ind
+        group_ind_ori = kmeans.labels_
+        group_position = kmeans.cluster_centers_
+        group_dis = group_position[:,0]**2 + group_position[:,1]**2 + group_position[:,2]**2
+        group_ind_sort = np.argsort(group_dis)
+        
+        #arrange groups with the group-central-distance to the centre
+        group_ind = group_ind_ori*0
+        for i in range(len(group_ind_sort)):
+            gnsi = group_ind_sort[i]
+            class_i = np.where(group_ind_ori == gnsi)[0]
+            group_ind[class_i] = i
+
         self.group_ind = group_ind
+        self.group_position = group_position
 
         group_list = []
         for i in range(n_clusters):
