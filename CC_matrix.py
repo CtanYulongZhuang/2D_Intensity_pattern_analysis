@@ -189,8 +189,8 @@ def CC_matrix_calculator(intens0, fname_output):
 if __name__ == '__main__':
     import configparser
     config = configparser.ConfigParser()
-    config.read('config_test.ini')
-    Path = str(config['DEFAULT']['PATH'])
+    config.read('config.ini')
+    Path = str(config['DEFAULT']['Path'])
     fname_inten = str(config['DEFAULT']['fname_inten'])
     fname_CC = str(config['DEFAULT']['fname_CC'])
     n_class = int(config['DEFAULT']['n_class'])
@@ -206,6 +206,6 @@ if __name__ == '__main__':
         intens0 = h5['intens'][:n_class]
         h5.close()
 
-    fname_output = Path + fname_CC + '_'+str(n_class)+'class'
+    fname_output = Path + fname_CC + '_'+str(n_class)+'class'+'.h5'
 
     CC_matrix_calculator(intens0, fname_output)
