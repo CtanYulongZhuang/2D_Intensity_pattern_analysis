@@ -10,6 +10,8 @@ class CCCalculator():
     def __init__(self, intens, n_angbins=40, mask_radius=20, interp_order=1):
         self.intens = intens
         self.size = intens.shape[-1]
+        self.n_angbins = n_angbins
+        self.mask_radius = mask_radius
         self.interp_order = interp_order
         self.cc_models = None
 
@@ -83,7 +85,10 @@ class CCCalculator():
         with h5py.File(fname_output, 'a') as h5f:
             if 'CL_CC' in h5f:
                 del h5f['CL_CC']
-            h5f['CL_CC'] = self.cc_models
+            h5f['CL_CC/cc_matrix'] = self.cc_models
+            h5f['CL_CC/n_angbins'] = self.n_angbins
+            h5f['CL_CC/mask_radius'] = self.mask_radius
+            h5f['CL_CC/interp_order'] = self.interp_order
 
 def main():
     parser = argparse.ArgumentParser(description='Calculate Common-line CC matrix')
