@@ -57,7 +57,7 @@ class CCCalculator():
             num += 1
             if irange[0] == 0 and jrange[0] == 1:
                 sys.stderr.write('\rC[%d,%d] = %f (%d/%d)   ' % (i, j, ccs.max(), num, len(irange)))
-        sys.stderr.write('\r')
+        sys.stderr.write('\n')
 
     def run(self, fname_output=None, nproc=16):
         n_models = self.intens.shape[0]
