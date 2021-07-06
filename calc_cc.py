@@ -1,3 +1,4 @@
+import sys
 import argparse
 import multiprocessing as mp
 import ctypes
@@ -48,10 +49,15 @@ class CCCalculator():
         n_models = intens.shape[0]
         irange = indices[:, 0]
         jrange = indices[:, 1]
+        num = 0
 
         for i, j in zip(irange, jrange):
             ccs = self.compare(intens[i], intens[j])
             cc_shared[j*n_models + i] = ccs.max()
+            num += 1
+            if irange[0] == 0 and jrange[0] == 1:
+                sys.stderr.write('\rC[%d,%d] = %f (%d/%d)   ' % (i, j, ccs.max(), num, len(irange)))
+        sys.stderr.write('\r')
 
     def run(self, fname_output=None, nproc=16):
         n_models = self.intens.shape[0]
@@ -102,6 +108,8 @@ def main():
                         help='Radius of inner mask to be ignored')
     parser.add_argument('-o', '--output_fname', default=None,
                         help='Path to output file name (default: same as intens_fname)')
+    parser.add_argument('-p', '--processes', type=int, default=16,
+                        help='Number of multiprocessing processes')
     args = parser.parse_args()
     
     with h5py.File(args.intens_fname, 'r') as h5f:
@@ -110,7 +118,7 @@ def main():
                         n_angbins=args.n_angbins,
                         mask_radius=args.mask_radius,
                         interp_order=args.interp_order)
-    calc.run()
+    calc.run(nproc=args.processes)
 
     if args.output_fname is None:
         args.output_fname = args.intens_fname
